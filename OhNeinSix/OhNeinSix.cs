@@ -60,12 +60,12 @@ namespace OhNeinSix
 
 		public override void OnDisable()
 		{
-			Debug(Details.name + " v." + Details.version + " has been disabled.");
+			Info(Details.name + " v." + Details.version + " has been disabled.");
 		}
 
 		public override void OnEnable()
 		{
-			Debug(Details.name + " v." + Details.version + " has been enabled.");
+			Info(Details.name + " v." + Details.version + " has been enabled.");
 		}
 
 		public override void Register()

@@ -23,14 +23,14 @@ namespace OhNeinSix
 			{
 				if (plugin.ExtremePunishment)
 				{
-					plugin.Info("Extreme Punishment.");
+					plugin.Debug("Extreme Punishment.");
 					float multi = Mathf.Pow(plugin.PunishMultiplier, counter);
 					int dmg = Mathf.FloorToInt(plugin.PunishDamage * multi);
 					player.Damage(dmg);
 				}
 				else
 				{
-					plugin.Info("Punishment.");
+					plugin.Debug("Punishment.");
 					player.Damage(plugin.PunishDamage);
 				}
 				counter++;
@@ -70,9 +70,9 @@ namespace OhNeinSix
 				float tarAngle = Vector3.Angle(tarForward, (scp.transform.position - tar.transform.position).normalized);
 				float scpAngle = Vector3.Angle(scpForward, (tar.transform.position - scp.transform.position).normalized);
 
-				plugin.Info("Target Angle " + tarAngle);
-				plugin.Info("SCP Angle: " + scpAngle);
-				plugin.Info("Linecast: " + (Physics.Linecast(player.GetPosition().ToVector3(), ply.GetPosition().ToVector3())).ToString());
+				plugin.Debug("Target Angle " + tarAngle);
+				plugin.Debug("SCP Angle: " + scpAngle);
+				plugin.Debug("Linecast: " + (Physics.Linecast(player.GetPosition().ToVector3(), ply.GetPosition().ToVector3())).ToString());
 
 				if (tarAngle <= 40 && scpAngle <= 40)
 				{
@@ -84,7 +84,7 @@ namespace OhNeinSix
 					}
 				}
 			}
-			plugin.Info("Adding targets: " + targets);
+			plugin.Debug("Adding targets: " + targets);
 			return targets;
 		}
 
@@ -138,7 +138,7 @@ namespace OhNeinSix
 				KeyValuePair<Player, float> min = new KeyValuePair<Player, float>(player, 100f);
 				foreach (var kvp in dist)
 				{
-					plugin.Info("Kvp: " + kvp.Value + "Min: " + min.Value);
+					plugin.Debug("Kvp: " + kvp.Value + "Min: " + min.Value);
 					if (kvp.Value < min.Value)
 						min = kvp;
 				}
