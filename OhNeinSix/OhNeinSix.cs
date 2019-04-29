@@ -1,13 +1,8 @@
 using Smod2;
-using Smod2.API;
 using Smod2.Config;
-using Smod2.Events;
 using Smod2.Attributes;
-using System;
 using System.Collections.Generic;
-using UnityEngine;
-using Harmony;
-using MEC;
+using System.Linq;
 
 namespace OhNeinSix
 {
@@ -26,7 +21,6 @@ namespace OhNeinSix
 	public class OhNeinSix : Plugin
 	{
 		public Methods Functions { get; private set; }
-		public readonly System.Random Gen = new System.Random();
 
 		[ConfigOption]
 		public bool Enabled = true;
@@ -53,10 +47,18 @@ namespace OhNeinSix
 		public float DamageResistance = 0.5f;
 
 		[ConfigOption]
-		public List<int> BlacklistedRoles = new List<int>() { 14 };
+		public int[] BlacklistedRoles = { 14 };
+
+		[ConfigOption]
+		public int RewardHealth = 100;
+
+		[ConfigOption]
+		public bool RewardHeal = true;
 
 		public static List<int> Targets = new List<int>();
 		public static List<int> Raged = new List<int>();
+
+		public int KillCounter { get; internal set; } = 0;
 
 		public override void OnDisable()
 		{
@@ -72,10 +74,10 @@ namespace OhNeinSix
 		{
 			Patch.Ghost.PatchMethodsUsingHarmony();
 
-			AddEventHandlers(new EventHandler(this), Smod2.Events.Priority.Normal);
+			AddEventHandlers(new EventHandler(this));
 
 			Functions = new Methods(this);
-			BlacklistedRoles.Add(2);
+			BlacklistedRoles.Append(2);
 		}
 	}
 }

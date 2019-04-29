@@ -1,5 +1,3 @@
-using System;
-using Smod2;
 using Smod2.API;
 using UnityEngine;
 using System.Linq;
@@ -39,19 +37,16 @@ namespace OhNeinSix
 			}
 		}
 
-		public float Distance(Vector a, Vector b)
-		{
-			return Vector.Distance(a, b);
-		}
+		private static float Distance(Vector a, Vector b) => Vector.Distance(a, b);
 
-		public List<int> AddTargets(Player ply)
+		public IEnumerable<int> AddTargets(Player ply)
 		{
 			List<Player> players = plugin.Server.GetPlayers();
 			GameObject scp = (GameObject)ply.GetGameObject();
 			Vector3 scpForward = scp.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
 			List<int> targets = new List<int>();
 
-			foreach (Player player in players.Where(p => plugin.Functions.Distance(ply.GetPosition(), p.GetPosition()) <= 25f))
+			foreach (Player player in players.Where(p => Distance(ply.GetPosition(), p.GetPosition()) <= 25f))
 			{
 				if (plugin.BlacklistedRoles.Contains((int)player.TeamRole.Role) || player.TeamRole.Team == Smod2.API.Team.SCP)
 				{
@@ -67,28 +62,29 @@ namespace OhNeinSix
 				GameObject tar = (GameObject)player.GetGameObject();
 				Vector3 tarForward = tar.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
 
-				float tarAngle = Vector3.Angle(tarForward, (scp.transform.position - tar.transform.position).normalized);
-				float scpAngle = Vector3.Angle(scpForward, (tar.transform.position - scp.transform.position).normalized);
+				Vector3 tarPos = tar.transform.position;
+				Vector3 scpPos = scp.transform.position;
+				
+				float tarAngle = Vector3.Angle(tarForward, (scpPos - tarPos).normalized);
+				float scpAngle = Vector3.Angle(scpForward, (tarPos - scpPos).normalized);
 
 				plugin.Debug("Target Angle " + tarAngle);
 				plugin.Debug("SCP Angle: " + scpAngle);
-				plugin.Debug("Linecast: " + (Physics.Linecast(player.GetPosition().ToVector3(), ply.GetPosition().ToVector3())).ToString());
+				plugin.Debug("Linecast: " + Physics.Linecast(player.GetPosition().ToVector3(), ply.GetPosition().ToVector3()));
 
-				if (tarAngle <= 40 && scpAngle <= 40)
-				{
-					if (player.PlayerId != ply.PlayerId && !Physics.Linecast(player.GetPosition().ToVector3(), ply.GetPosition().ToVector3(), kWallMask))
-					{
-						targets.Add(player.PlayerId);
-						player.PersonalClearBroadcasts();
-						player.PersonalBroadcast(5, "You are a target for SCP-096!", false);
-					}
-				}
+				if (!(tarAngle <= 40) || !(scpAngle <= 40)) continue;
+				if (player.PlayerId == ply.PlayerId || Physics.Linecast(player.GetPosition().ToVector3(),
+					    ply.GetPosition().ToVector3(), KWallMask)) continue;
+				
+				targets.Add(player.PlayerId);
+				player.PersonalClearBroadcasts();
+				player.PersonalBroadcast(5, "You are a target for SCP-096!", false);
 			}
 			plugin.Debug("Adding targets: " + targets);
 			return targets;
 		}
 
-		private const int kWallMask =
+		private const int KWallMask =
 		1 << 30 | // Lockers
 		1 << 27 | // Door
 		1 << 14 | // Glass
@@ -103,8 +99,8 @@ namespace OhNeinSix
 				List<Player> players = plugin.Server.GetPlayers();
 				Dictionary<Player, float> dist = new Dictionary<Player, float>();
 
-				foreach (int playerID in plugin.Functions.AddTargets(player))
-					OhNeinSix.Targets.Add(playerID);
+				foreach (int playerId in plugin.Functions.AddTargets(player))
+					OhNeinSix.Targets.Add(playerId);
 
 				foreach (Player tar in players.Where(pl => OhNeinSix.Targets.Contains(pl.PlayerId)))
 				{
@@ -118,13 +114,9 @@ namespace OhNeinSix
 					float distance = Distance(player.GetPosition(), tar.GetPosition());
 
 					if (distance <= plugin.MaxRange)
-					{
 						dist.Add(tar, distance);
-					}
 					else
-					{
 						OhNeinSix.Targets.Remove(tar.PlayerId);
-					}
 				}
 
 				if (dist.Count < 1)
@@ -136,14 +128,14 @@ namespace OhNeinSix
 				}
 
 				KeyValuePair<Player, float> min = new KeyValuePair<Player, float>(player, 100f);
-				foreach (var kvp in dist)
+				foreach (KeyValuePair<Player, float> kvp in dist)
 				{
 					plugin.Debug("Kvp: " + kvp.Value + "Min: " + min.Value);
 					if (kvp.Value < min.Value)
 						min = kvp;
 				}
 
-				double value = ((plugin.MaxRange - min.Value) / plugin.MaxRange);
+				double value = (plugin.MaxRange - min.Value) / plugin.MaxRange;
 				string bar = DrawBar(value);
 
 				player.PersonalClearBroadcasts();
@@ -153,21 +145,19 @@ namespace OhNeinSix
 			}
 		}
 
-		public string DrawBar(double percentage)
+		private static string DrawBar(double percentage)
 		{
 			string bar = "<color=#ffffff>(</color>";
-			const int BAR_SIZE = 20;
+			const int barSize = 20;
 
 			percentage *= 100;
 			if (percentage == 0) return "(      )";
 
-			for (double i = 0; i < 100; i += (100 / BAR_SIZE))
-			{
+			for (double i = 0; i < 100; i += 100 / barSize)
 				if (i < percentage)
 					bar += "█";
 				else
 					bar += "<color=#c50000>█</color>";
-			}
 
 			bar += "<color=#ffffff>)</color>";
 

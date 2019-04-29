@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Smod2.EventHandlers;
 using Smod2.API;
 
@@ -16,10 +12,10 @@ namespace OhNeinSix
 	public class Player096EnrageEvent : Smod2.Events.Event
 	{
 		public Player Player;
-		public float rageProgress;
-		public bool allowEnrage = true;
+		public float RageProgress;
+		public bool AllowEnrage = true;
 		public Object Script;
-		public EnrageState enrageState;
+		public EnrageState EnrageState;
 
 		public override void ExecuteHandler(IEventHandler handler)
 		{
