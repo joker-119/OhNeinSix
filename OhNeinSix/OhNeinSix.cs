@@ -11,7 +11,7 @@ namespace OhNeinSix
 		name = "OhNeinSix",
 		description = "A lore-friendly rework of SCP-096",
 		id = "joker.OhNeinSix",
-		version = "1.0.0",
+		version = "1.0.9",
 		configPrefix = "oh96",
 		SmodMajor = 3,
 		SmodMinor = 4,
@@ -21,9 +21,16 @@ namespace OhNeinSix
 	public class OhNeinSix : Plugin
 	{
 		public Methods Functions { get; private set; }
+		
+		public Dictionary<int, List<int>> Hidden = TargetedGhostmode.TargetedGhostmode.Hidden;
+
+		public TargetedGhostmode.TargetedGhostmode Ghost =
+			(TargetedGhostmode.TargetedGhostmode) Smod2.PluginManager.Manager.GetEnabledPlugin("joker.TargetGhostmode");
 
 		[ConfigOption]
 		public bool Enabled = true;
+
+		[ConfigOption] public bool DistanceBar = true;
 
 		[ConfigOption]
 		public bool ExtremePunishment = false;
@@ -58,7 +65,7 @@ namespace OhNeinSix
 		public static List<int> Targets = new List<int>();
 		public static List<int> Raged = new List<int>();
 
-		public int KillCounter { get; internal set; } = 0;
+		public int KillCounter { get; internal set; }
 
 		public override void OnDisable()
 		{
@@ -72,7 +79,7 @@ namespace OhNeinSix
 
 		public override void Register()
 		{
-			Patch.Ghost.PatchMethodsUsingHarmony();
+			Event.PatchMethodsUsingHarmony();
 
 			AddEventHandlers(new EventHandler(this));
 

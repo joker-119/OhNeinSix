@@ -9,7 +9,7 @@ using UnityEngine.Networking;
 using RemoteAdmin;
 
 
-namespace OhNeinSix.Patch
+namespace OhNeinSix
 {
 	[HarmonyPatch(typeof(Scp096PlayerScript))]
 	[HarmonyPatch("SetRage")]
@@ -32,110 +32,10 @@ namespace OhNeinSix.Patch
 
 			return ev.AllowEnrage;
 		}
-	}
-
-
-	[HarmonyPatch(typeof(PlayerPositionManager))]
-	[HarmonyPatch("TransmitData")]
-
-	class Ghost
-	{
-
-		[HarmonyPrefix]
-
-		static bool Prefix(PlayerPositionManager __instance)
-		{
-			// if (OhNeinSix.Raged.Count <= 0) return true;
-
-			List<PlayerPositionData> posData = new List<PlayerPositionData>();
-			List<GameObject> players = PlayerManager.singleton.players.ToList();
-			bool smGhostMode = ConfigFile.GetBool("sm_enable_ghostmode", false);
-
-			foreach (GameObject player in players)
-			{
-				posData.Add(new PlayerPositionData(player));
-			}
-
-			__instance.ReceiveData(posData.ToArray());
-
-			foreach (GameObject gameObject in players)
-			{
-				CharacterClassManager component = gameObject.GetComponent<CharacterClassManager>();
-
-				if (smGhostMode && gameObject != __instance.gameObject && component.curClass >= 0)
-				{
-					for (int i = 0; i < posData.Count; i++)
-					{
-						if (players[i] == gameObject) continue;
-						
-						CharacterClassManager component2 = players[i].GetComponent<CharacterClassManager>();
-						if (smGhostMode && component2.smGhostMode && component2.curClass >= 0 && component2.curClass != 2 && (component.curClass != 2 || (!component2.smVisibleToSpec && component.curClass == 2)) && (!component2.smVisibleWhenTalking || (component2.smVisibleWhenTalking && !component2.GetComponent<Radio>().NetworkisTransmitting)))
-						{
-							posData[i] = new PlayerPositionData
-							{
-								position = Vector3.up * 6000f,
-								rotation = 0f,
-								playerID = posData[i].playerID
-							};
-						}
-					}
-				}
-				switch (component.curClass)
-				{
-					case 16:
-					case 17:
-					{
-						List<PlayerPositionData> posData939 = new List<PlayerPositionData>(posData);
-
-						for (int i = 0; i < posData939.Count; i++)
-						{
-							CharacterClassManager component2 = players[i].GetComponent<CharacterClassManager>();
-							if (posData939[i].position.y < 800f && component2.klasy[component2.curClass].team != Team.SCP && component2.klasy[component2.curClass].team != Team.RIP && !players[i].GetComponent<Scp939_VisionController>().CanSee(component.GetComponent<Scp939PlayerScript>()))
-							{
-								posData939[i] = new PlayerPositionData
-								{
-									position = Vector3.up * 6000f,
-									rotation = 0f,
-									playerID = posData939[i].playerID
-								};
-							}
-						}
-						__instance.CallTargetTransmit(gameObject.GetComponent<NetworkIdentity>().connectionToClient, posData939.ToArray());
-						break;
-					}
-					case 9 when OhNeinSix.Raged.Contains(component.GetComponent<QueryProcessor>().PlayerId):
-					{
-						List<PlayerPositionData> posData096 = new List<PlayerPositionData>(posData);
-
-						for (int i = 0; i < posData096.Count; i++)
-						{
-							int tarClass = players[i].GetComponent<CharacterClassManager>().curClass;
-							if (!OhNeinSix.Targets.Contains(players[i].GetComponent<QueryProcessor>().PlayerId)
-							    && tarClass != 0 && tarClass != 3 && tarClass != 5 && tarClass != 7 && tarClass != 9 && tarClass != 10 && tarClass != 14 && tarClass != 16 && tarClass != 17)
-							{
-								posData096[i] = new PlayerPositionData
-								{
-									position = Vector3.up * 6000f,
-									rotation = 0f,
-									playerID = posData096[i].playerID
-								};
-							}
-						}
-						__instance.CallTargetTransmit(gameObject.GetComponent<NetworkIdentity>().connectionToClient, posData096.ToArray());
-						break;
-					}
-					default:
-						__instance.CallTargetTransmit(gameObject.GetComponent<NetworkIdentity>().connectionToClient, posData.ToArray());
-						break;
-				}
-			}
-
-			return false;
-		}
-		public static void PatchMethodsUsingHarmony()
+		
+		internal static void PatchMethodsUsingHarmony()
 		{
 			HarmonyInstance harmony = HarmonyInstance.Create("com.joker119.096events");
-			harmony.UnpatchAll();
 			harmony.PatchAll();
 		}
 	}

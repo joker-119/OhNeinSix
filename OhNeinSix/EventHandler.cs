@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Smod2;
 using Smod2.API;
 using Smod2.Events;
@@ -7,7 +8,8 @@ using MEC;
 
 namespace OhNeinSix
 {
-	public class EventHandler : IEventHandlerWaitingForPlayers, IEventHandlerPlayerHurt, IEventHandlerPlayerDie, IEventHandler096Enrage, IEventHandlerSetRole
+	public class EventHandler : IEventHandlerWaitingForPlayers, IEventHandlerPlayerHurt, IEventHandlerPlayerDie,
+		IEventHandler096Enrage, IEventHandlerSetRole
 	{
 		private readonly OhNeinSix plugin;
 		public EventHandler(OhNeinSix plugin) => this.plugin = plugin;
@@ -35,11 +37,15 @@ namespace OhNeinSix
 				"However, you will take ever-increasing damage every 5sec while you stay enraged. Hunt down and kill your \'targets\' quickly. \n" +
 				"During this enrage, other players can still see you, but only grenades and environmental damage (like teslas) can harm you."
 			);
+			
+			//Timing.RunCoroutine(plugin.Functions.UpdateHidden());
+			Timing.RunCoroutine(plugin.Functions.Debug());
 		}
 
 		public void OnSetEnrage(Player096EnrageEvent ev)
 		{
 			GameObject scp = (GameObject)ev.Player.GetGameObject();
+			int scpid = ev.Player.PlayerId;
 
 			switch (ev.EnrageState)
 			{
@@ -47,13 +53,19 @@ namespace OhNeinSix
 				{
 					OhNeinSix.Raged.Add(ev.Player.PlayerId);
 
-					foreach (int playerId in plugin.Functions.AddTargets(ev.Player)) 
-						OhNeinSix.Targets.Add(playerId);
+					foreach (int tar in plugin.Functions.AddTargets(ev.Player))
+					{
+						OhNeinSix.Targets.Add(tar);
+						plugin.Info("Attempting hide..");
+						plugin.Ghost.Functions.Hide(scpid, tar);
+						plugin.Info("Hiding " + tar);
+					}
 
 					if (OhNeinSix.Targets.Count <= 0)
 					{
 						ev.EnrageState = EnrageState.NotEnraged;
 						OhNeinSix.Raged.Remove(ev.Player.PlayerId);
+						plugin.Hidden[scpid].Clear();
 						return;
 					}
 
@@ -83,6 +95,7 @@ namespace OhNeinSix
 					break;
 				}
 				case EnrageState.Enraged when OhNeinSix.Targets.Count == 0:
+					ev.RageProgress = 0f;
 					ev.EnrageState = EnrageState.Cooldown;
 					break;
 			}
@@ -90,14 +103,28 @@ namespace OhNeinSix
 
 		public void OnPlayerHurt(PlayerHurtEvent ev)
 		{
-			if (ev.DamageType == DamageType.TESLA || ev.DamageType == DamageType.WALL || ev.DamageType == DamageType.NUKE || ev.DamageType == DamageType.FRAG || ev.DamageType == DamageType.DECONT) return;
+			if (ev.DamageType == DamageType.TESLA || ev.DamageType == DamageType.WALL ||
+			    ev.DamageType == DamageType.NUKE || ev.DamageType == DamageType.FRAG ||
+			    ev.DamageType == DamageType.DECONT || ev.Player == ev.Attacker) return;
 
-			if (!OhNeinSix.Raged.Contains(ev.Player.PlayerId)) return;
-			
-			ev.Damage = ev.Damage * plugin.DamageResistance;
+			if (OhNeinSix.Raged.Contains(ev.Player.PlayerId))
+			{
 
-			if (!OhNeinSix.Targets.Contains(ev.Attacker.PlayerId))
+				ev.Damage = ev.Damage * plugin.DamageResistance;
+
+				if (!OhNeinSix.Targets.Contains(ev.Attacker.PlayerId))
+					OhNeinSix.Targets.Add(ev.Attacker.PlayerId);
+			}
+			else 
+			{
+				GameObject ply = (GameObject) ev.Player.GetGameObject();
+				Scp096PlayerScript script = ply.GetComponent<Scp096PlayerScript>();
+				
 				OhNeinSix.Targets.Add(ev.Attacker.PlayerId);
+
+				if (script.enraged == Scp096PlayerScript.RageState.NotEnraged)
+					script.enraged = Scp096PlayerScript.RageState.Panic;
+			}
 		}
 
 
@@ -111,10 +138,13 @@ namespace OhNeinSix
 					plugin.KillCounter++;
 			}
 
-			if (!OhNeinSix.Raged.Contains(ev.Player.PlayerId)) return;
+			if (OhNeinSix.Raged.Contains(ev.Player.PlayerId))
+			{
+				OhNeinSix.Raged.Remove(ev.Player.PlayerId);
+				OhNeinSix.Targets.Clear();
+			}
 			
-			OhNeinSix.Raged.Remove(ev.Player.PlayerId);
-			OhNeinSix.Targets.Clear();
+			// plugin.Functions.UpdateHidden();
 		}
 	}
 }
