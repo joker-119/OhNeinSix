@@ -3,6 +3,8 @@ using Smod2.Config;
 using Smod2.Attributes;
 using System.Collections.Generic;
 using System.Linq;
+using Harmony;
+using UnityEngine;
 
 namespace OhNeinSix
 {
@@ -46,6 +48,8 @@ namespace OhNeinSix
 		[ConfigOption]
 		public float DamageResistance = 0.5f;
 
+		[ConfigOption] public bool ResistantPanic = true;
+
 		[ConfigOption]
 		public int[] BlacklistedRoles = { 14 };
 
@@ -55,10 +59,17 @@ namespace OhNeinSix
 		[ConfigOption]
 		public bool RewardHeal = true;
 
-		public static List<int> Targets = new List<int>();
-		public static List<int> Raged = new List<int>();
+		[ConfigOption] public bool PersistantTargets = false;
 
-		public int KillCounter { get; internal set; } = 0;
+		public static List<int> Targets = new List<int>();
+		public List<int> PreviousTargets = new List<int>();
+		public static List<int> Raged = new List<int>();
+		public List<int> Panicked = new List<int>();
+		public List<int> BlacklistedRoleList = new List<int>();
+
+		public float MaxDist => Mathf.Pow(MaxRange, 2f);
+
+		public int KillCounter { get; internal set; }
 
 		public override void OnDisable()
 		{
@@ -77,7 +88,6 @@ namespace OhNeinSix
 			AddEventHandlers(new EventHandler(this));
 
 			Functions = new Methods(this);
-			BlacklistedRoles.Append(2);
 		}
 	}
 }

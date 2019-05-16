@@ -37,7 +37,7 @@ namespace OhNeinSix
 			}
 		}
 
-		private static float Distance(Vector a, Vector b) => Vector.Distance(a, b);
+		private static float Distance(Vector a, Vector b) => (a - b).Magnitude;
 
 		public IEnumerable<int> AddTargets(Player ply)
 		{
@@ -46,9 +46,9 @@ namespace OhNeinSix
 			Vector3 scpForward = scp.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
 			List<int> targets = new List<int>();
 
-			foreach (Player player in players.Where(p => Distance(ply.GetPosition(), p.GetPosition()) <= 25f))
+			foreach (Player player in players.Where(p => Distance(ply.GetPosition(), p.GetPosition()) <= plugin.MaxDist))
 			{
-				if (plugin.BlacklistedRoles.Contains((int)player.TeamRole.Role) || player.TeamRole.Team == Smod2.API.Team.SCP)
+				if (plugin.BlacklistedRoleList.Contains((int)player.TeamRole.Role) || player.TeamRole.Team == Smod2.API.Team.SCP)
 				{
 					plugin.Info("Player " + player.Name + "'s role is blacklisted: " + player.TeamRole.Role);
 					continue;
@@ -59,6 +59,12 @@ namespace OhNeinSix
 					continue;
 				}
 
+				if (plugin.PreviousTargets.Contains(player.PlayerId) && plugin.PersistantTargets)
+				{
+					targets.Add(player.PlayerId);
+					plugin.Info(player.Name + " has been added as a previous target.");
+				}
+
 				GameObject tar = (GameObject)player.GetGameObject();
 				Vector3 tarForward = tar.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
 
@@ -67,10 +73,6 @@ namespace OhNeinSix
 				
 				float tarAngle = Vector3.Angle(tarForward, (scpPos - tarPos).normalized);
 				float scpAngle = Vector3.Angle(scpForward, (tarPos - scpPos).normalized);
-
-				plugin.Debug("Target Angle " + tarAngle);
-				plugin.Debug("SCP Angle: " + scpAngle);
-				plugin.Debug("Linecast: " + Physics.Linecast(player.GetPosition().ToVector3(), ply.GetPosition().ToVector3()));
 
 				if (!(tarAngle <= 40) || !(scpAngle <= 40)) continue;
 				if (player.PlayerId == ply.PlayerId || Physics.Linecast(player.GetPosition().ToVector3(),
@@ -97,7 +99,7 @@ namespace OhNeinSix
 			while (OhNeinSix.Raged.Contains(player.PlayerId))
 			{
 				List<Player> players = plugin.Server.GetPlayers();
-				Dictionary<Player, float> dist = new Dictionary<Player, float>();
+				Dictionary<Player, float> dlist = new Dictionary<Player, float>();
 
 				foreach (int playerId in plugin.Functions.AddTargets(player))
 					OhNeinSix.Targets.Add(playerId);
@@ -113,13 +115,16 @@ namespace OhNeinSix
 
 					float distance = Distance(player.GetPosition(), tar.GetPosition());
 
-					if (distance <= plugin.MaxRange)
-						dist.Add(tar, distance);
+					if (distance <= plugin.MaxDist)
+						dlist.Add(tar, distance);
 					else
+					{
 						OhNeinSix.Targets.Remove(tar.PlayerId);
+						plugin.PreviousTargets.Add(tar.PlayerId);
+					}
 				}
 
-				if (dist.Count < 1)
+				if (dlist.Count < 1)
 				{
 					OhNeinSix.Raged.Remove(player.PlayerId);
 					OhNeinSix.Targets.Clear();
@@ -128,7 +133,7 @@ namespace OhNeinSix
 				}
 
 				KeyValuePair<Player, float> min = new KeyValuePair<Player, float>(player, 100f);
-				foreach (KeyValuePair<Player, float> kvp in dist)
+				foreach (KeyValuePair<Player, float> kvp in dlist)
 				{
 					plugin.Debug("Kvp: " + kvp.Value + "Min: " + min.Value);
 					if (kvp.Value < min.Value)

@@ -19,6 +19,10 @@ namespace OhNeinSix
 
 			OhNeinSix.Raged.Clear();
 			OhNeinSix.Targets.Clear();
+			foreach (int i in plugin.BlacklistedRoles)
+				plugin.BlacklistedRoleList.Add(i);
+			
+			plugin.BlacklistedRoleList.Add(2);
 		}
 
 		public void OnSetRole(PlayerSetRoleEvent ev)
@@ -46,6 +50,7 @@ namespace OhNeinSix
 				case EnrageState.Panic:
 				{
 					OhNeinSix.Raged.Add(ev.Player.PlayerId);
+					plugin.Panicked.Add(ev.Player.PlayerId);
 
 					foreach (int playerId in plugin.Functions.AddTargets(ev.Player)) 
 						OhNeinSix.Targets.Add(playerId);
@@ -85,16 +90,22 @@ namespace OhNeinSix
 				case EnrageState.Enraged when OhNeinSix.Targets.Count == 0:
 					ev.EnrageState = EnrageState.Cooldown;
 					break;
+				default:
+					plugin.Panicked.Remove(ev.Player.PlayerId);
+					break;
 			}
 		}
 
 		public void OnPlayerHurt(PlayerHurtEvent ev)
 		{
+			if (plugin.Panicked.Contains(ev.Player.PlayerId) && plugin.ResistantPanic)
+				ev.Damage *= plugin.DamageResistance;
+			
 			if (ev.DamageType == DamageType.TESLA || ev.DamageType == DamageType.WALL || ev.DamageType == DamageType.NUKE || ev.DamageType == DamageType.FRAG || ev.DamageType == DamageType.DECONT) return;
 
 			if (!OhNeinSix.Raged.Contains(ev.Player.PlayerId)) return;
 			
-			ev.Damage = ev.Damage * plugin.DamageResistance;
+			ev.Damage *= plugin.DamageResistance;
 
 			if (!OhNeinSix.Targets.Contains(ev.Attacker.PlayerId))
 				OhNeinSix.Targets.Add(ev.Attacker.PlayerId);
@@ -110,6 +121,9 @@ namespace OhNeinSix
 				if (OhNeinSix.Raged.Contains(ev.Killer.PlayerId) && plugin.RewardHeal)
 					plugin.KillCounter++;
 			}
+
+			if (plugin.PreviousTargets.Contains(ev.Player.PlayerId))
+				plugin.PreviousTargets.Remove(ev.Player.PlayerId);
 
 			if (!OhNeinSix.Raged.Contains(ev.Player.PlayerId)) return;
 			
