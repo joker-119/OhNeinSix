@@ -1,13 +1,16 @@
+using System.Linq;
 using Smod2;
 using Smod2.API;
 using Smod2.Events;
 using Smod2.EventHandlers;
 using UnityEngine;
 using MEC;
+using TargetedGhostmode;
 
 namespace OhNeinSix
 {
-	public class EventHandler : IEventHandlerWaitingForPlayers, IEventHandlerPlayerHurt, IEventHandlerPlayerDie, IEventHandler096Enrage, IEventHandlerSetRole
+	public class EventHandler : IEventHandlerWaitingForPlayers, IEventHandlerPlayerHurt, IEventHandlerPlayerDie,
+		IEventHandlerSetRole, IEventHandlerScp096Panic, IEventHandlerScp096Enrage, IEventHandlerScp096CooldownStart
 	{
 		private readonly OhNeinSix plugin;
 		public EventHandler(OhNeinSix plugin) => this.plugin = plugin;
@@ -39,62 +42,10 @@ namespace OhNeinSix
 				"However, you will take ever-increasing damage every 5sec while you stay enraged. Hunt down and kill your \'targets\' quickly. \n" +
 				"During this enrage, other players can still see you, but only grenades and environmental damage (like teslas) can harm you."
 			);
+			Timing.RunCoroutine(plugin.Functions.CheckInvisible(ev.Player));
 		}
 
-		public void OnSetEnrage(Player096EnrageEvent ev)
-		{
-			GameObject scp = (GameObject)ev.Player.GetGameObject();
-
-			switch (ev.EnrageState)
-			{
-				case EnrageState.Panic:
-				{
-					OhNeinSix.Raged.Add(ev.Player.PlayerId);
-					plugin.Panicked.Add(ev.Player.PlayerId);
-
-					foreach (int playerId in plugin.Functions.AddTargets(ev.Player)) 
-						OhNeinSix.Targets.Add(playerId);
-
-					if (OhNeinSix.Targets.Count <= 0)
-					{
-						ev.EnrageState = EnrageState.NotEnraged;
-						OhNeinSix.Raged.Remove(ev.Player.PlayerId);
-						return;
-					}
-
-					Timing.RunCoroutine(plugin.Functions.GetClosestPlayer(ev.Player));
-					Timing.RunCoroutine(plugin.Functions.Punish(ev.Player));
-
-					if (plugin.EnragedBypass)
-						scp.GetComponent<ServerRoles>().BypassMode = true;
-					break;
-				}
-				case EnrageState.Cooldown when OhNeinSix.Targets.Count > 0:
-					ev.EnrageState = EnrageState.Enraged;
-					ev.RageProgress = 1f;
-					break;
-				case EnrageState.Cooldown:
-				{
-					OhNeinSix.Raged.Remove(ev.Player.PlayerId);
-
-					if (plugin.RewardHeal)
-					{
-						ev.Player.AddHealth(plugin.RewardHealth * plugin.KillCounter);
-						plugin.KillCounter = 0;
-					}
-
-					if (plugin.EnragedBypass)
-						scp.GetComponent<ServerRoles>().BypassMode = false;
-					break;
-				}
-				case EnrageState.Enraged when OhNeinSix.Targets.Count == 0:
-					ev.EnrageState = EnrageState.Cooldown;
-					break;
-				default:
-					plugin.Panicked.Remove(ev.Player.PlayerId);
-					break;
-			}
-		}
+		
 
 		public void OnPlayerHurt(PlayerHurtEvent ev)
 		{
@@ -108,7 +59,10 @@ namespace OhNeinSix
 			ev.Damage *= plugin.DamageResistance;
 
 			if (!OhNeinSix.Targets.Contains(ev.Attacker.PlayerId))
+			{
 				OhNeinSix.Targets.Add(ev.Attacker.PlayerId);
+				ev.Attacker.ShowPlayer(ev.Player);
+			}
 		}
 
 
@@ -117,6 +71,8 @@ namespace OhNeinSix
 			if (OhNeinSix.Targets.Contains(ev.Player.PlayerId))
 			{
 				OhNeinSix.Targets.Remove(ev.Player.PlayerId);
+				if (ev.Killer.IsHiddenFrom(ev.Player))
+					ev.Killer.ShowPlayer(ev.Player);
 
 				if (OhNeinSix.Raged.Contains(ev.Killer.PlayerId) && plugin.RewardHeal)
 					plugin.KillCounter++;
@@ -128,7 +84,70 @@ namespace OhNeinSix
 			if (!OhNeinSix.Raged.Contains(ev.Player.PlayerId)) return;
 			
 			OhNeinSix.Raged.Remove(ev.Player.PlayerId);
+			foreach (Player ply in plugin.Server.GetPlayers().Where(p => ev.Player.IsHiddenFrom(p)))
+				ev.Player.ShowPlayer(ply);
 			OhNeinSix.Targets.Clear();
+		}
+
+		public void OnScp096Panic(Scp096PanicEvent ev)
+		{
+			GameObject scp = (GameObject) ev.Player.GetGameObject();
+			
+			OhNeinSix.Raged.Add(ev.Player.PlayerId);
+			plugin.Panicked.Add(ev.Player.PlayerId);
+			
+			foreach (int playerId in plugin.Functions.AddTargets(ev.Player))
+				OhNeinSix.Targets.Add(playerId);
+
+			if (OhNeinSix.Targets.Count <= 0)
+			{
+				ev.Allow = false;
+				OhNeinSix.Raged.Remove(ev.Player.PlayerId);
+				return;
+			}
+			
+			Timing.RunCoroutine(plugin.Functions.GetClosestPlayer(ev.Player));
+			Timing.RunCoroutine(plugin.Functions.Punish(ev.Player));
+
+			if (plugin.EnragedBypass)
+				scp.GetComponent<ServerRoles>().BypassMode = true;
+		}
+
+		public void OnScp096Enrage(Scp096EnrageEvent ev)
+		{
+			GameObject scp = (GameObject) ev.Player.GetGameObject();
+			
+			if (OhNeinSix.Targets.Count == 0)
+			{
+				ev.Allow = false;
+				scp.GetComponent<Scp096PlayerScript>().enraged = Scp096PlayerScript.RageState.Cooldown;
+			}
+
+			plugin.Panicked.Remove(ev.Player.PlayerId);
+		}
+
+		public void OnScp096CooldownStart(Scp096CooldownStartEvent ev)
+		{
+			GameObject scp = (GameObject) ev.Player.GetGameObject();
+
+			if (OhNeinSix.Targets.Count > 0)
+			{
+				ev.Allow = false;
+				scp.GetComponent<Scp096PlayerScript>().enraged = Scp096PlayerScript.RageState.Enraged;
+				return;
+			}
+
+			plugin.Panicked.Remove(ev.Player.PlayerId);
+			OhNeinSix.Raged.Remove(ev.Player.PlayerId);
+
+			if (plugin.RewardHeal)
+			{
+				ev.Player.AddHealth(plugin.RewardHealth * plugin.KillCounter);
+				plugin.KillCounter = 0;
+			}
+
+			if (plugin.EnragedBypass)
+				scp.GetComponent<ServerRoles>().BypassMode = false;
 		}
 	}
 }
