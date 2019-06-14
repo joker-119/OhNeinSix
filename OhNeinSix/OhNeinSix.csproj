@@ -22,6 +22,9 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\References\Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="scp035, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\References\scp035.dll</HintPath>
+    </Reference>
     <Reference Include="Smod2">
       <HintPath>..\References\Smod2.dll</HintPath>
     </Reference>
@@ -35,6 +38,9 @@
     <Reference Include="System.Xml" />
     <Reference Include="Harmony">
       <HintPath>..\References\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="TargetedGhostmode, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\References\TargetedGhostmode.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\References\UnityEngine.dll</HintPath>
@@ -55,9 +61,10 @@
   <ItemGroup>
     <Compile Include="OhNeinSix.cs" />
     <Compile Include="Methods.cs" />
-    <Compile Include="Harmony\Patch.cs" />
     <Compile Include="EventHandler.cs" />
-    <Compile Include="Harmony\IEventHandler096Enrage.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Harmony" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

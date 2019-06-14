@@ -59,6 +59,8 @@ namespace OhNeinSix
 		[ConfigOption]
 		public bool RewardHeal = true;
 
+		[ConfigOption] public bool HideAllies = false;
+
 		[ConfigOption] public bool PersistantTargets = false;
 
 		public static List<int> Targets = new List<int>();
@@ -66,8 +68,6 @@ namespace OhNeinSix
 		public static List<int> Raged = new List<int>();
 		public List<int> Panicked = new List<int>();
 		public List<int> BlacklistedRoleList = new List<int>();
-
-		public float MaxDist => Mathf.Pow(MaxRange, 2f);
 
 		public int KillCounter { get; internal set; }
 
@@ -83,8 +83,6 @@ namespace OhNeinSix
 
 		public override void Register()
 		{
-			Patch.Ghost.PatchMethodsUsingHarmony();
-
 			AddEventHandlers(new EventHandler(this));
 
 			Functions = new Methods(this);

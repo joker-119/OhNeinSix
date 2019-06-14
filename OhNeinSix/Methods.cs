@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using MEC;
-using ServerMod2.API;
+using TargetedGhostmode;
 
 namespace OhNeinSix
 {
@@ -46,41 +46,63 @@ namespace OhNeinSix
 			Vector3 scpForward = scp.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
 			List<int> targets = new List<int>();
 
-			foreach (Player player in players.Where(p => Distance(ply.GetPosition(), p.GetPosition()) <= plugin.MaxDist))
+			foreach (Player target in players)
 			{
-				if (plugin.BlacklistedRoleList.Contains((int)player.TeamRole.Role) || player.TeamRole.Team == Smod2.API.Team.SCP)
+
+				if (target.PlayerId == ply.PlayerId) continue;
+				
+				if (plugin.BlacklistedRoleList.Contains((int) target.TeamRole.Role) ||
+				    target.TeamRole.Team == Smod2.API.Team.SCP || target.GetRankName() == "SCP-035")
 				{
-					plugin.Info("Player " + player.Name + "'s role is blacklisted: " + player.TeamRole.Role);
+					plugin.Info("Target " + target.Name + "'s role is blacklisted: " + target.TeamRole.Role);
+					if (plugin.HideAllies && !(ply.IsHiddenFrom(target)))
+						ply.HidePlayer(target);
+					
 					continue;
 				}
-				if (OhNeinSix.Targets.Contains(player.PlayerId))
+
+				if (OhNeinSix.Targets.Contains(target.PlayerId))
 				{
-					plugin.Info("Player " + player.Name + " is already on target list.");
+					plugin.Info("Target " + target.Name + " is already on target list.");
+					continue;
+				}
+				
+				if (Distance(ply.GetPosition(), target.GetPosition()) >= plugin.MaxRange)
+				{
+					if (!ply.IsHiddenFrom(target))
+						ply.HidePlayer(target);
 					continue;
 				}
 
-				if (plugin.PreviousTargets.Contains(player.PlayerId) && plugin.PersistantTargets)
+				if (plugin.PreviousTargets.Contains(target.PlayerId))
 				{
-					targets.Add(player.PlayerId);
-					plugin.Info(player.Name + " has been added as a previous target.");
+					plugin.Info("Target " + target.Name + " has been added as a previous target.");
+					targets.Add(target.PlayerId);
+					if (ply.IsHiddenFrom(target))
+						ply.ShowPlayer(target);
+					continue;
 				}
 
-				GameObject tar = (GameObject)player.GetGameObject();
-				Vector3 tarForward = tar.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
-
+				GameObject tar = (GameObject) target.GetGameObject();
+				Vector3 tarFwd = tar.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
 				Vector3 tarPos = tar.transform.position;
 				Vector3 scpPos = scp.transform.position;
-				
-				float tarAngle = Vector3.Angle(tarForward, (scpPos - tarPos).normalized);
+				float tarAngle = Vector3.Angle(tarFwd, (scpPos - tarPos).normalized);
 				float scpAngle = Vector3.Angle(scpForward, (tarPos - scpPos).normalized);
 
-				if (!(tarAngle <= 40) || !(scpAngle <= 40)) continue;
-				if (player.PlayerId == ply.PlayerId || Physics.Linecast(player.GetPosition().ToVector3(),
-					    ply.GetPosition().ToVector3(), KWallMask)) continue;
-				
-				targets.Add(player.PlayerId);
-				player.PersonalClearBroadcasts();
-				player.PersonalBroadcast(5, "You are a target for SCP-096!", false);
+				if (target.PlayerId == ply.PlayerId || Physics.Linecast(tarPos, scpPos, KWallMask) ||
+				    !(tarAngle <= 40) || !(scpAngle <= 40))
+				{
+					if (!ply.IsHiddenFrom(target))
+						ply.HidePlayer(target);
+					continue;
+				}
+
+				targets.Add(target.PlayerId);
+				if (ply.IsHiddenFrom(target))
+					ply.ShowPlayer(target);
+				target.PersonalClearBroadcasts();
+				target.PersonalBroadcast(5, "You are a target for <color=#FF0000> SCP-096 </color>!", false);
 			}
 			plugin.Debug("Adding targets: " + targets);
 			return targets;
@@ -104,29 +126,31 @@ namespace OhNeinSix
 				foreach (int playerId in plugin.Functions.AddTargets(player))
 					OhNeinSix.Targets.Add(playerId);
 
-				foreach (Player tar in players.Where(pl => OhNeinSix.Targets.Contains(pl.PlayerId)))
+				foreach (Player tar in players.Where(p => OhNeinSix.Targets.Contains(p.PlayerId)))
 				{
 					plugin.Info(tar.Name + " is a target.");
-					if (tar.TeamRole.Team == Smod2.API.Team.SCP)
-					{
-						OhNeinSix.Targets.Remove(tar.PlayerId);
-						continue;
-					}
 
 					float distance = Distance(player.GetPosition(), tar.GetPosition());
+					plugin.Info("Distance: " + distance + " Max: " + plugin.MaxRange);
 
-					if (distance <= plugin.MaxDist)
+					if (distance <= plugin.MaxRange)
 						dlist.Add(tar, distance);
 					else
 					{
 						OhNeinSix.Targets.Remove(tar.PlayerId);
-						plugin.PreviousTargets.Add(tar.PlayerId);
+						if (!player.IsHiddenFrom(tar))
+							player.HidePlayer(tar);
+						if (plugin.PersistantTargets)
+							plugin.PreviousTargets.Add(tar.PlayerId);
 					}
 				}
 
+				plugin.Info("Dist count: " + dlist.Count);
 				if (dlist.Count < 1)
 				{
 					OhNeinSix.Raged.Remove(player.PlayerId);
+					foreach (Player ply in plugin.Server.GetPlayers().Where(t => player.IsHiddenFrom(t)))
+						player.ShowPlayer(ply);
 					OhNeinSix.Targets.Clear();
 					((GameObject)player.GetGameObject()).GetComponent<Scp096PlayerScript>().rageProgress = 0f;
 					break;
@@ -145,8 +169,26 @@ namespace OhNeinSix
 
 				player.PersonalClearBroadcasts();
 				player.PersonalBroadcast(1, "<size=30><color=#c50000>Distance to nearest target: </color><color=#10F110>" + bar + "</color></size> \n" + "<size=25>Targets Remaining: <color=#c50000>" + OhNeinSix.Targets.Count + "</color></size>", false);
+				
 
 				yield return Timing.WaitForSeconds(0.5f);
+			}
+		}
+
+		public IEnumerator<float> CheckInvisible(Player player)
+		{
+			GameObject ply = (GameObject) player.GetGameObject();
+
+			while (true)
+			{
+				if (player.TeamRole.Role != Role.SCP_096)
+					yield break;
+				
+				foreach (Player tar in plugin.Server.GetPlayers())
+					if (ply.GetComponent<Scp096PlayerScript>().enraged != Scp096PlayerScript.RageState.Enraged)
+						player.ShowPlayer(tar);
+				
+				yield return Timing.WaitForSeconds(0.75f);
 			}
 		}
 
