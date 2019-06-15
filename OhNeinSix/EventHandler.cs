@@ -33,14 +33,14 @@ namespace OhNeinSix
 			if (ev.Role != Role.SCP_096) return;
 			
 			ev.Player.PersonalClearBroadcasts();
-			ev.Player.PersonalBroadcast(10, "<color=#c50000><b>SCP-096 is heavily altered on this server. Please press ~ and review the changes if you are new to this server.</b></color>", false);
+			ev.Player.PersonalBroadcast(10, "<color=#c50000><b>La forma en la que se juega con SCP-096 es muy diferente en este servidor. Por favor, revisa los cambios dandole la Ñ si eres nuevo.</b></color>", false);
 			ev.Player.SendConsoleMessage
 			(
-				"SCP-096 is heavily altered to change his gameplay to keep it more lore-friendly. \n" +
-				"When you enrage, a list of people looking at you will be generated, and listed to you as \'targets\'. \n" +
-				"These targets are the only people you will be able to see and kill. Your rage will not end until they are dead, or they get too far away. \n" +
-				"However, you will take ever-increasing damage every 5sec while you stay enraged. Hunt down and kill your \'targets\' quickly. \n" +
-				"During this enrage, other players can still see you, but only grenades and environmental damage (like teslas) can harm you."
+				"La forma en la que se juega conSCP-096 ha sido drasticamente cambiada para mantenerlo mas fiel al material original. \n" +
+				"Cuando te enfadas, se generará una lista de jugadores marcados como tus \'objetivos\'. \n" +
+				"Estas seran las unicas personas a las que podras eliminar. El enfado no terminara hasta que tus objetivos no sean eliminados. \n" +
+				"Sin embargo, por cada 5 segundos que estes enfadado el daño que sufres aumentará. Elimina rapido a tus objetivos. \n" +
+				"Durante el enfado, los demas jugadores seguirán pudiendo verte, pero solo las granadas y elementos ambientales (como los teslas) pueden hacerte daño."
 			);
 			Timing.RunCoroutine(plugin.Functions.CheckInvisible(ev.Player));
 		}
