@@ -120,7 +120,7 @@ namespace OhNeinSix
 
 			foreach (ReferenceHub hub in hubs)
 			{
-				if (hub == ev.Player || hub.characterClassManager.CurClass == RoleType.Tutorial)
+				if (hub == ev.Player || hub.characterClassManager.CurClass == RoleType.Tutorial || !hub.characterClassManager.IsHuman())
 					continue;
 				
 				Vector3 tarPos = hub.gameObject.transform.position;
