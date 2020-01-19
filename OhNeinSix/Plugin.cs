@@ -12,6 +12,7 @@ namespace OhNeinSix
 		
 		public override void OnEnable()
 		{
+			EventPlugin.GhostmodePatchDisable = true;
 			EventHandlers = new EventHandlers(this);
 			Events.Scp096CalmEvent += EventHandlers.OnCalm;
 			Events.Scp096EnrageEvent += EventHandlers.OnEnrage;

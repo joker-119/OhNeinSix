@@ -18,7 +18,10 @@ namespace OhNeinSix
 		public void OnPlayerDeath(ref PlayerDeathEvent ev)
 		{
 			if (Plugin.Scp096Targets.Contains(ev.Player.queryProcessor.PlayerId))
+			{
 				Plugin.Scp096Targets.Remove(ev.Player.queryProcessor.PlayerId);
+				TargetCount++;
+			}
 			else if (ev.Player.characterClassManager.CurClass == RoleType.Scp096 || ev.Player == scp096)
 			{
 				Timing.KillCoroutines("checkranges");
@@ -62,7 +65,7 @@ namespace OhNeinSix
 					}
 					else
 					{
-						if (distance > min)
+						if (distance < min)
 							min = distance;
 					}
 				}
@@ -189,7 +192,7 @@ namespace OhNeinSix
 			ev.Script.Networkenraged = Scp096PlayerScript.RageState.Cooldown;
 			ReferenceHub scp = Plugin.GetPlayer(ev.Script.gameObject);
 			scp.serverRoles.BypassMode = false;
-			int healAmount = 25 * TargetCount;
+			int healAmount = 65 * TargetCount;
 			Timing.RunCoroutine(plugin.EventHandlers.HealOverTime(scp, healAmount, 10f), "heal096");
 			scp096 = null;
 		}
