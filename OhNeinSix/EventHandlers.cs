@@ -58,7 +58,7 @@ namespace OhNeinSix
 
 					float distance = Vector3.Distance(player.gameObject.transform.position, tar.gameObject.transform.position);
 					
-					if (distance >= plugin.MaxRange)
+					if (distance >= 80f)
 					{
 						Plugin.Scp096Targets.Remove(tar.queryProcessor.PlayerId);
 						TargetCount--;
@@ -70,7 +70,7 @@ namespace OhNeinSix
 					}
 				}
 
-				double value = (plugin.MaxRange - min) / plugin.MaxRange;
+				double value = (80f - min) / 80f;
 				string bar = DrawBar(value);
 
 				player.GetComponent<Broadcast>().TargetClearElements(player.characterClassManager.connectionToClient);
@@ -83,17 +83,17 @@ namespace OhNeinSix
 
 		private IEnumerator<float> Punish(Scp096PlayerScript script, ReferenceHub rh)
 		{
-			yield return Timing.WaitForSeconds(plugin.PunishDelay * 2);
+			yield return Timing.WaitForSeconds(5.5f);
 			int counter = 0;
 			while (script.Networkenraged == Scp096PlayerScript.RageState.Enraged)
 			{
 				counter++;
-				float multi = Mathf.Pow(plugin.PunishMultiplier, counter);
-				int dmg = Mathf.FloorToInt(plugin.PunishDamage * multi);
+				float multi = Mathf.Pow(1.25f, counter);
+				int dmg = Mathf.FloorToInt(30 * multi);
 				rh.playerStats.HurtPlayer(
-					new PlayerStats.HitInfo(plugin.ExtremePunishement ? dmg : plugin.PunishDamage, rh.nicknameSync.MyNick, DamageTypes.Contain,
+					new PlayerStats.HitInfo(dmg, rh.nicknameSync.MyNick, DamageTypes.Contain,
 						rh.queryProcessor.PlayerId), rh.gameObject);
-				yield return Timing.WaitForSeconds(plugin.PunishDelay);
+				yield return Timing.WaitForSeconds(5f);
 			}
 		}
 		
@@ -123,13 +123,13 @@ namespace OhNeinSix
 
 			foreach (ReferenceHub hub in hubs)
 			{
-				if (hub == ev.Player || plugin.BlacklistedRoles.Contains((int)hub.characterClassManager.CurClass) || !hub.characterClassManager.IsHuman())
+				if (hub == ev.Player || hub.characterClassManager.CurClass == RoleType.Tutorial || !hub.characterClassManager.IsHuman())
 					continue;
 				
 				Vector3 tarPos = hub.gameObject.transform.position;
 				Vector3 scpPos = ev.Player.gameObject.transform.position;
 
-				if (Vector3.Distance(tarPos, scpPos) > plugin.MaxRange)
+				if (Vector3.Distance(tarPos, scpPos) > 80f)
 				{
 					Plugin.Info("SCP-096: Range too high, continuing..");
 					continue;
@@ -171,8 +171,7 @@ namespace OhNeinSix
 				return;
 			}
 
-			if (plugin.EnragedBypass)
-				ev.Player.serverRoles.BypassMode = true;
+			ev.Player.serverRoles.BypassMode = true;
 			TargetCount = Plugin.Scp096Targets.Count;
 			scp096 = ev.Player;
 			plugin.Coroutines.Add(Timing.RunCoroutine(GetClosestPlayer(ev.Script, ev.Player, hubs), "checkranges"));
@@ -193,7 +192,6 @@ namespace OhNeinSix
 			ev.Script.Networkenraged = Scp096PlayerScript.RageState.Cooldown;
 			ReferenceHub scp = Plugin.GetPlayer(ev.Script.gameObject);
 			scp.serverRoles.BypassMode = false;
-			ev.Script._cooldown = plugin.CooldownTime;
 			int healAmount = 65 * TargetCount;
 			Timing.RunCoroutine(plugin.EventHandlers.HealOverTime(scp, healAmount, 10f), "heal096");
 			scp096 = null;
@@ -231,9 +229,6 @@ namespace OhNeinSix
 				else
 					Timing.KillCoroutines("heal096");
 			}
-			
-			if (ev.Player.characterClassManager.CurClass == RoleType.Scp096 && ev.Player.GetComponent<Scp096PlayerScript>().Networkenraged == Scp096PlayerScript.RageState.Enraged)
-				ev.Info = new PlayerStats.HitInfo(ev.Info.Amount * plugin.DamageResistance, ev.Info.Attacker, ev.Info.GetDamageType(), ev.Info.PlyId);
 		}
 
 		public void OnWaitingForPlayers()
