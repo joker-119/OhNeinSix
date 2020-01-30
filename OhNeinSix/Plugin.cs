@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using EXILED;
+using Harmony;
 using MEC;
 
 namespace OhNeinSix
@@ -21,6 +22,8 @@ namespace OhNeinSix
 		public bool EnragedBypass;
 		public float CooldownTime;
 		public int HealAmount;
+
+		public static int PatchCounter;
 		
 		public override void OnEnable()
 		{
@@ -38,6 +41,9 @@ namespace OhNeinSix
 			Events.RoundEndEvent += EventHandlers.OnRoundEnd;
 			Events.RoundStartEvent += EventHandlers.OnRoundStart;
 			Events.WaitingForPlayersEvent += EventHandlers.OnWaitingForPlayers;
+			PatchCounter++;
+			HarmonyInstance instance = HarmonyInstance.Create($"com.joker.ohneinsix-{PatchCounter}");
+			instance.PatchAll();
 		}
 
 		public override void OnDisable()
