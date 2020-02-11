@@ -83,13 +83,25 @@ namespace OhNeinSix
 
 		private IEnumerator<float> Punish(Scp096PlayerScript script, ReferenceHub rh)
 		{
+			while (script.Networkenraged == Scp096PlayerScript.RageState.Panic)
+				yield return Timing.WaitForSeconds(0.5f);
+			
+			Plugin.Debug($"Starting punishment loop..");
 			yield return Timing.WaitForSeconds(plugin.PunishDelay * 2);
 			int counter = 0;
-			while (script.Networkenraged == Scp096PlayerScript.RageState.Enraged)
+			for (;;)
 			{
+				if (script.Networkenraged != Scp096PlayerScript.RageState.Enraged)
+				{
+					Plugin.Debug($"No longer enraged, breaking loop.");
+					break;
+				}
+
 				counter++;
 				float multi = Mathf.Pow(plugin.PunishMultiplier, counter);
 				int dmg = Mathf.FloorToInt(plugin.PunishDamage * multi);
+				Plugin.Debug(
+					plugin.ExtremePunishement ? $"Punishing for {dmg}(extreme)" : $"Punishing for {plugin.PunishDamage}");
 				rh.playerStats.HurtPlayer(
 					new PlayerStats.HitInfo(plugin.ExtremePunishement ? dmg : plugin.PunishDamage, rh.nicknameSync.MyNick, DamageTypes.Contain,
 						rh.queryProcessor.PlayerId), rh.gameObject);

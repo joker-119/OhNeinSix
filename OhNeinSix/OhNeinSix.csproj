@@ -8,7 +8,7 @@
         <OutputType>Library</OutputType>
         <AppDesignerFolder>Properties</AppDesignerFolder>
         <RootNamespace>OhNeinSix</RootNamespace>
-        <AssemblyName>OhNeinSix1.1.6</AssemblyName>
+        <AssemblyName>OhNeinSix1.1.8</AssemblyName>
         <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
     </PropertyGroup>

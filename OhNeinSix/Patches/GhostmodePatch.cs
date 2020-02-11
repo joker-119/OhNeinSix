@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using EXILED;
+using EXILED.Extensions;
 using Harmony;
 using Mirror;
 using UnityEngine;
@@ -21,6 +23,7 @@ namespace OhNeinSix.Patches
 					__instance.receivedData[index] = new PlayerPositionData(players[index]);
 				if (__instance.transmitBuffer == null || __instance.transmitBuffer.Length < __instance.usedData)
 					__instance.transmitBuffer = new PlayerPositionData[__instance.usedData * 2];
+				
 				foreach (GameObject gameObject in players)
 				{
 					CharacterClassManager component1 = gameObject.GetComponent<CharacterClassManager>();
@@ -30,20 +33,31 @@ namespace OhNeinSix.Patches
 					{
 						for (int i = 0; i < __instance.usedData; i++)
 						{
-							ReferenceHub hub = Plugin.GetPlayer(__instance.transmitBuffer[i].playerID.ToString());
-							if (hub.characterClassManager.CurClass != RoleType.Tutorial)
+							ReferenceHub hub = Player.GetPlayer(__instance.transmitBuffer[i].playerID);
+							if (hub.characterClassManager.CurClass != RoleType.Tutorial && !Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId))
 								continue;
 							Scp049PlayerScript script = hub.GetComponent<Scp049PlayerScript>();
 							Vector3 fwd = script.plyCam.transform.forward;
 							Vector3 pos = script.gameObject.transform.position;
 							Vector3 position = component1.gameObject.transform.position;
-							float angle = Vector3.Angle(fwd,
-								(pos - position).normalized);
+							float angle = Vector3.Angle(fwd, (pos - position).normalized);
 							Vector3 dir = (pos - position).normalized;
 							Quaternion rot = Quaternion.LookRotation(dir);
-							if (angle <= 80f)
+
+							if (!Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId))
 							{
-								__instance.transmitBuffer[i] = new PlayerPositionData(__instance.transmitBuffer[i].position, Quaternion.Inverse(rot).y, __instance.transmitBuffer[i].playerID, __instance.transmitBuffer[i].uses268);
+								__instance.transmitBuffer[i] = new PlayerPositionData(Vector3.up * 6000f, 0.0f,
+									__instance.transmitBuffer[i].playerID);
+								continue;
+							}
+
+							if (angle >= 100f)
+							{
+								float newAngle = Vector3.Angle(new Vector3(fwd.x, fwd.y + 180f, fwd.z),
+									(pos - position).normalized);
+								Log.Info($"{angle} {newAngle}");
+								if (component1.CurClass == RoleType.Scp096 && EventPlugin.Scp096Fix || component1.CurClass == RoleType.Scp173 && EventPlugin.Scp173Fix)
+									__instance.transmitBuffer[i] = new PlayerPositionData(__instance.transmitBuffer[i].position, newAngle, __instance.transmitBuffer[i].playerID);
 							}
 						}
 					}
@@ -64,21 +78,23 @@ namespace OhNeinSix.Patches
 							}
 						}
 					}
-					else if (component1.CurClass == RoleType.Scp096)
-					{
-						Scp096PlayerScript script = component1.GetComponent<Scp096PlayerScript>();
-						if (script.Networkenraged == Scp096PlayerScript.RageState.Enraged || script.Networkenraged == Scp096PlayerScript.RageState.Panic)
-							for (int i = 0; i < __instance.usedData; i++)
-								if (!Plugin.Scp096Targets.Contains(__instance.transmitBuffer[i].playerID))
-									__instance.transmitBuffer[i] = new PlayerPositionData(Vector3.up * 6000f, 0f, __instance.transmitBuffer[i].playerID);
-					}
-					else if (component1.CurClass != RoleType.Scp079 || component1.CurClass != RoleType.Spectator)
+					else if (component1.CurClass != RoleType.Scp079 && component1.CurClass != RoleType.Spectator)
 					{
 						for (int index = 0; index < __instance.usedData; ++index)
 						{
-							if (__instance.transmitBuffer[index].uses268 || EXILED.EventPlugin.GhostedIds.Contains(__instance.transmitBuffer[index].playerID))
+							if (__instance.transmitBuffer[index].uses268 || EventPlugin.GhostedIds.Contains(__instance.transmitBuffer[index].playerID))
 								__instance.transmitBuffer[index] = new PlayerPositionData(Vector3.up * 6000f, 0.0f,
 									__instance.transmitBuffer[index].playerID);
+						}
+					}
+
+					if (EventPlugin.TargetGhost.ContainsKey(Player.GetPlayer(gameObject)))
+					{
+						for (int i = 0; i < __instance.usedData; i++)
+						{
+							if (EventPlugin.TargetGhost[Player.GetPlayer(gameObject)]
+								.Contains(__instance.transmitBuffer[i].playerID))
+								__instance.transmitBuffer[i] = new PlayerPositionData(Vector3.up * 6000f, 0.0f, __instance.transmitBuffer[i].playerID);
 						}
 					}
 
@@ -109,7 +125,7 @@ namespace OhNeinSix.Patches
 			}
 			catch (Exception e)
 			{
-				Plugin.Info($"TransmitData Error. {e}");
+				Log.Error($"TransmitData Error: {e}");
 				return true;
 			}
 		}
