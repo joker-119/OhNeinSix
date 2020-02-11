@@ -34,7 +34,7 @@ namespace OhNeinSix.Patches
 						for (int i = 0; i < __instance.usedData; i++)
 						{
 							ReferenceHub hub = Player.GetPlayer(__instance.transmitBuffer[i].playerID);
-							if (hub.characterClassManager.CurClass != RoleType.Tutorial && !Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId))
+							if (hub.characterClassManager.CurClass != RoleType.Tutorial)
 								continue;
 							Scp049PlayerScript script = hub.GetComponent<Scp049PlayerScript>();
 							Vector3 fwd = script.plyCam.transform.forward;
@@ -43,14 +43,7 @@ namespace OhNeinSix.Patches
 							float angle = Vector3.Angle(fwd, (pos - position).normalized);
 							Vector3 dir = (pos - position).normalized;
 							Quaternion rot = Quaternion.LookRotation(dir);
-
-							if (!Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId))
-							{
-								__instance.transmitBuffer[i] = new PlayerPositionData(Vector3.up * 6000f, 0.0f,
-									__instance.transmitBuffer[i].playerID);
-								continue;
-							}
-
+							
 							if (angle >= 100f)
 							{
 								float newAngle = Vector3.Angle(new Vector3(fwd.x, fwd.y + 180f, fwd.z),
@@ -60,6 +53,15 @@ namespace OhNeinSix.Patches
 									__instance.transmitBuffer[i] = new PlayerPositionData(__instance.transmitBuffer[i].position, newAngle, __instance.transmitBuffer[i].playerID);
 							}
 						}
+					}
+
+					if (component1.CurClass == RoleType.Scp096)
+					{
+						Scp096PlayerScript script = gameObject.GetComponent<Scp096PlayerScript>();
+						if (script.Networkenraged == Scp096PlayerScript.RageState.Enraged || script.Networkenraged == Scp096PlayerScript.RageState.Panic)
+							for (int index = 0; index < __instance.usedData; ++index)
+								if (!Plugin.Scp096Targets.Contains(__instance.transmitBuffer[index].playerID)) 
+									__instance.transmitBuffer[index] = new PlayerPositionData(Vector3.up * 6000f, 0.0f, __instance.transmitBuffer[index].playerID);
 					}
 
 					if (component1.CurClass.Is939())
