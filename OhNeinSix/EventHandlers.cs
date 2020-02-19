@@ -11,8 +11,8 @@ namespace OhNeinSix
 	public class EventHandlers
 	{
 		private readonly Plugin plugin;
-		public EventHandlers(Plugin plugin) => this.plugin = plugin; 
-		public int TargetCount;
+		public EventHandlers(Plugin plugin) => this.plugin = plugin;
+		private int targetCount;
 		private ReferenceHub scp096; 
 	
 
@@ -21,7 +21,7 @@ namespace OhNeinSix
 			if (Plugin.Scp096Targets.Contains(ev.Player.queryProcessor.PlayerId))
 			{
 				Plugin.Scp096Targets.Remove(ev.Player.queryProcessor.PlayerId);
-				TargetCount++;
+				targetCount++;
 			}
 			else if (ev.Player.characterClassManager.CurClass == RoleType.Scp096 || ev.Player == scp096)
 			{
@@ -33,14 +33,9 @@ namespace OhNeinSix
 			}
 		}
 
-		private const int KWallMask =
-			1 << 30 | // Lockers
-			1 << 27 | // Door
-			1 << 14 | // Glass
-			1 << 9 | // Pickups
-			1 << 0;   // Default
-		
-		public IEnumerator<float> GetClosestPlayer(Scp096PlayerScript script, ReferenceHub player)
+		private const int kWallMask = 1207976449;
+
+		private IEnumerator<float> GetClosestPlayer(Scp096PlayerScript script, ReferenceHub player)
 		{
 			yield return Timing.WaitForSeconds(5.5f);
 			while (script.Networkenraged == Scp096PlayerScript.RageState.Enraged)
@@ -49,7 +44,7 @@ namespace OhNeinSix
 				
 				foreach (int target in Plugin.Scp096Targets)
 				{
-					if (Plugin.GetPlayer(target.ToString()) == null)
+					if (Player.GetPlayer(target.ToString()) == null)
 						Plugin.Scp096Targets.Remove(target);
 				}
 
@@ -64,7 +59,7 @@ namespace OhNeinSix
 					if (distance >= plugin.MaxRange)
 					{
 						Plugin.Scp096Targets.Remove(tar.queryProcessor.PlayerId);
-						TargetCount--;
+						targetCount--;
 					}
 					else
 					{
@@ -89,24 +84,24 @@ namespace OhNeinSix
 			while (script.Networkenraged == Scp096PlayerScript.RageState.Panic)
 				yield return Timing.WaitForSeconds(0.5f);
 			
-			Plugin.Debug($"Starting punishment loop..");
+			Log.Debug($"Starting punishment loop..");
 			yield return Timing.WaitForSeconds(plugin.PunishDelay * 2);
 			int counter = 0;
 			for (;;)
 			{
 				if (script.Networkenraged != Scp096PlayerScript.RageState.Enraged)
 				{
-					Plugin.Debug($"No longer enraged, breaking loop.");
+					Log.Debug($"No longer enraged, breaking loop.");
 					break;
 				}
 
 				counter++;
 				float multi = Mathf.Pow(plugin.PunishMultiplier, counter);
 				int dmg = Mathf.FloorToInt(plugin.PunishDamage * multi);
-				Plugin.Debug(
-					plugin.ExtremePunishement ? $"Punishing for {dmg}(extreme)" : $"Punishing for {plugin.PunishDamage}");
+				Log.Debug(
+					plugin.ExtremePunishment ? $"Punishing for {dmg}(extreme)" : $"Punishing for {plugin.PunishDamage}");
 				rh.playerStats.HurtPlayer(
-					new PlayerStats.HitInfo(plugin.ExtremePunishement ? dmg : plugin.PunishDamage, rh.nicknameSync.MyNick, DamageTypes.Contain,
+					new PlayerStats.HitInfo(plugin.ExtremePunishment ? dmg : plugin.PunishDamage, rh.nicknameSync.MyNick, DamageTypes.Contain,
 						rh.queryProcessor.PlayerId), rh.gameObject);
 				yield return Timing.WaitForSeconds(plugin.PunishDelay);
 			}
@@ -115,12 +110,11 @@ namespace OhNeinSix
 		private static string DrawBar(double percentage)
 		{
 			string bar = "<color=#ffffff>(</color>";
-			const int barSize = 20;
 
 			percentage *= 100;
 			if (percentage == 0) return "(      )";
 
-			for (double i = 0; i < 100; i += 100 / barSize)
+			for (double i = 0; i < 100; i += 5)
 				if (i < percentage)
 					bar += "█";
 				else
@@ -133,29 +127,28 @@ namespace OhNeinSix
 		
 		public void OnEnrage(ref Scp096EnrageEvent ev)
 		{
-			Plugin.Info("SCP 096 ENRAGE EVENT");
-			List<ReferenceHub> hubs = GetValidTargets(ev.Player);
+			Log.Info("SCP 096 ENRAGE EVENT");
+			GetValidTargets(ev.Player);
 
 			if (!Plugin.Scp096Targets.Any())
 			{
 				ev.Script._rageProgress -= ev.Script._rageProgress * 0.1f;
 				ev.Allow = false;
 				ev.Script.enraged = Scp096PlayerScript.RageState.NotEnraged;
-				Plugin.Info("No targets, ending OnEnrage. SCP096 should not be enraged.");
+				Log.Info("No targets, ending OnEnrage. SCP096 should not be enraged.");
 				return;
 			}
 
 			if (plugin.EnragedBypass)
 				ev.Player.serverRoles.BypassMode = true;
-			TargetCount = Plugin.Scp096Targets.Count;
+			targetCount = Plugin.Scp096Targets.Count;
 			scp096 = ev.Player;
 			plugin.Coroutines.Add(Timing.RunCoroutine(GetClosestPlayer(ev.Script, ev.Player), "checkranges"));
 			plugin.Coroutines.Add(Timing.RunCoroutine(Punish(ev.Script, ev.Player), "punish"));
 		}
 
-		public List<ReferenceHub> GetValidTargets(ReferenceHub scp)
+		private void GetValidTargets(ReferenceHub scp)
 		{
-			List<ReferenceHub> targets = new List<ReferenceHub>();
 			foreach (ReferenceHub hub in Player.GetHubs())
 			{
 				if (Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId) || hub == scp || plugin.BlacklistedRoles.Contains((int)hub.characterClassManager.CurClass) || !hub.characterClassManager.IsHuman())
@@ -166,13 +159,13 @@ namespace OhNeinSix
 
 				if (Vector3.Distance(tarPos, scpPos) > plugin.MaxRange)
 				{
-					Plugin.Info("SCP-096: Range too high, continuing..");
+					Log.Info("SCP-096: Range too high, continuing..");
 					continue;
 				}
 
-				if (Physics.Linecast(tarPos, scpPos, KWallMask))
+				if (Physics.Linecast(tarPos, scpPos, kWallMask))
 				{
-					Plugin.Info("Scp-096: Linecast true, continuing..");
+					Log.Info("Scp-096: Linecast true, continuing..");
 					continue;
 				}
 
@@ -184,21 +177,18 @@ namespace OhNeinSix
 
 				if (tarAngle >= 42f || scpAngle >= 42f)
 				{
-					Plugin.Info("SCP-096: Angle too high, continuing..");
+					Log.Info("SCP-096: Angle too high, continuing..");
 					continue;
 				}
 				
 				if (!Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId))
 				{
-					Plugin.Info($"SCP-096: Adding {hub.queryProcessor.PlayerId} to targets.");
+					Log.Info($"SCP-096: Adding {hub.queryProcessor.PlayerId} to targets.");
 					Plugin.Scp096Targets.Add(hub.queryProcessor.PlayerId);
-					targets.Add(hub);
 				}
 
 				hub.Broadcast(5, "You are a target for SCP-096!");
 			}
-
-			return targets;
 		}
 
 		public void OnCalm(ref Scp096CalmEvent ev)
@@ -213,9 +203,9 @@ namespace OhNeinSix
 			Timing.KillCoroutines("checkranges");
 			ev.Script._rageProgress = 0f;
 			ev.Script.Networkenraged = Scp096PlayerScript.RageState.Cooldown;
-			ReferenceHub scp = Plugin.GetPlayer(ev.Script.gameObject);
+			ReferenceHub scp = ev.Script.gameObject.GetPlayer();
 			scp.serverRoles.BypassMode = false;
-			int healAmount = plugin.HealAmount * TargetCount;
+			int healAmount = plugin.HealAmount * targetCount;
 			Timing.RunCoroutine(plugin.EventHandlers.HealOverTime(scp, healAmount, 10f), "heal096");
 			Timing.RunCoroutine(ChangeCooldown(ev.Script, plugin.CooldownTime));
 			scp096 = null;
@@ -227,8 +217,8 @@ namespace OhNeinSix
 
 			script._cooldown = cd;
 		}
-		
-		public IEnumerator<float> HealOverTime(ReferenceHub rh, int amount, float time)
+
+		private IEnumerator<float> HealOverTime(ReferenceHub rh, int amount, float time)
 		{
 			float amountPerTick = amount / time;
 			float tracker = time;
@@ -243,13 +233,13 @@ namespace OhNeinSix
 		{
 			if (ev.Player.nicknameSync.MyNick == "Dedicated Server")
 			{
-				Plugin.Debug("HURT: Is server, returning.");
+				Log.Debug("HURT: Is server, returning.");
 				return;
 			}
 			
 			if (ev.Attacker == null)
 			{
-				Plugin.Debug("HURT: Attacker is null!");
+				Log.Debug("HURT: Attacker is null!");
 				return;
 			}
 			

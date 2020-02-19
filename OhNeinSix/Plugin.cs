@@ -17,13 +17,13 @@ namespace OhNeinSix
 		public List<int> BlacklistedRoles;
 		public float PunishDelay;
 		public int PunishDamage;
-		public bool ExtremePunishement;
+		public bool ExtremePunishment;
 		public float PunishMultiplier;
 		public bool EnragedBypass;
 		public float CooldownTime;
 		public int HealAmount;
 
-		public static int PatchCounter;
+		private static int _patchCounter;
 		
 		public override void OnEnable()
 		{
@@ -41,8 +41,8 @@ namespace OhNeinSix
 			Events.RoundEndEvent += EventHandlers.OnRoundEnd;
 			Events.RoundStartEvent += EventHandlers.OnRoundStart;
 			Events.WaitingForPlayersEvent += EventHandlers.OnWaitingForPlayers;
-			PatchCounter++;
-			HarmonyInstance instance = HarmonyInstance.Create($"com.joker.ohneinsix-{PatchCounter}");
+			_patchCounter++;
+			HarmonyInstance instance = HarmonyInstance.Create($"com.joker.ohneinsix-{_patchCounter}");
 			instance.PatchAll();
 		}
 
@@ -66,7 +66,7 @@ namespace OhNeinSix
 			//Ignored
 		}
 
-		public void ReloadConfig()
+		private void ReloadConfig()
 		{
 			Enabled = Config.GetBool("oh96_enabled", true);
 			MaxRange = Config.GetFloat("oh96_max_range", 80f);
@@ -75,7 +75,7 @@ namespace OhNeinSix
 			PunishDelay = Config.GetFloat("oh96_punish_delay", 5f);
 			PunishDamage = Config.GetInt("oh96_punish_dmg", 35);
 			PunishMultiplier = Config.GetFloat("oh96_punish_multiplier", 1.35f);
-			ExtremePunishement = Config.GetBool("oh96_extreme_punishment", true);
+			ExtremePunishment = Config.GetBool("oh96_extreme_punishment", true);
 			EnragedBypass = Config.GetBool("oh96_enraged_bypass", true);
 			CooldownTime = Config.GetFloat("oh96_cooldown_time", 10f);
 			HealAmount = Config.GetInt("oh96_heal_amount", 65);
