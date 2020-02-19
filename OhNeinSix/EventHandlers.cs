@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using EXILED;
+using EXILED.Extensions;
 using MEC;
 using UnityEngine;
 
@@ -44,6 +45,8 @@ namespace OhNeinSix
 			yield return Timing.WaitForSeconds(5.5f);
 			while (script.Networkenraged == Scp096PlayerScript.RageState.Enraged)
 			{
+				GetValidTargets(player);
+				
 				foreach (int target in Plugin.Scp096Targets)
 				{
 					if (Plugin.GetPlayer(target.ToString()) == null)
@@ -131,48 +134,7 @@ namespace OhNeinSix
 		public void OnEnrage(ref Scp096EnrageEvent ev)
 		{
 			Plugin.Info("SCP 096 ENRAGE EVENT");
-			List<ReferenceHub> hubs = Plugin.GetHubs();
-
-			foreach (ReferenceHub hub in hubs)
-			{
-				if (hub == ev.Player || plugin.BlacklistedRoles.Contains((int)hub.characterClassManager.CurClass) || !hub.characterClassManager.IsHuman())
-					continue;
-				
-				Vector3 tarPos = hub.gameObject.transform.position;
-				Vector3 scpPos = ev.Player.gameObject.transform.position;
-
-				if (Vector3.Distance(tarPos, scpPos) > plugin.MaxRange)
-				{
-					Plugin.Info("SCP-096: Range too high, continuing..");
-					continue;
-				}
-
-				if (Physics.Linecast(tarPos, scpPos, KWallMask))
-				{
-					Plugin.Info("Scp-096: Linecast true, continuing..");
-					continue;
-				}
-
-				Vector3 scpFwd = ev.Player.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
-				Vector3 tarFwd = hub.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
-
-				float scpAngle = Vector3.Angle(scpFwd, (tarPos - scpPos).normalized);
-				float tarAngle = Vector3.Angle(tarFwd, (scpPos - tarPos).normalized);
-
-				if (tarAngle >= 42f || scpAngle >= 42f)
-				{
-					Plugin.Info("SCP-096: Angle too high, continuing..");
-					continue;
-				}
-
-				if (!Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId))
-				{
-					Plugin.Info($"SCP-096: Adding {hub.queryProcessor.PlayerId} to targets.");
-					Plugin.Scp096Targets.Add(hub.queryProcessor.PlayerId);
-				}
-
-				hub.Broadcast(5, "You are a target for SCP-096!");
-			}
+			List<ReferenceHub> hubs = GetValidTargets(ev.Player);
 
 			if (!Plugin.Scp096Targets.Any())
 			{
@@ -189,6 +151,54 @@ namespace OhNeinSix
 			scp096 = ev.Player;
 			plugin.Coroutines.Add(Timing.RunCoroutine(GetClosestPlayer(ev.Script, ev.Player, hubs), "checkranges"));
 			plugin.Coroutines.Add(Timing.RunCoroutine(Punish(ev.Script, ev.Player), "punish"));
+		}
+
+		public List<ReferenceHub> GetValidTargets(ReferenceHub scp)
+		{
+			List<ReferenceHub> targets = new List<ReferenceHub>();
+			foreach (ReferenceHub hub in Player.GetHubs())
+			{
+				if (Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId) || hub == scp || plugin.BlacklistedRoles.Contains((int)hub.characterClassManager.CurClass) || !hub.characterClassManager.IsHuman())
+					continue;
+				
+				Vector3 tarPos = hub.gameObject.transform.position;
+				Vector3 scpPos = scp.gameObject.transform.position;
+
+				if (Vector3.Distance(tarPos, scpPos) > plugin.MaxRange)
+				{
+					Plugin.Info("SCP-096: Range too high, continuing..");
+					continue;
+				}
+
+				if (Physics.Linecast(tarPos, scpPos, KWallMask))
+				{
+					Plugin.Info("Scp-096: Linecast true, continuing..");
+					continue;
+				}
+
+				Vector3 scpFwd = scp.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
+				Vector3 tarFwd = hub.GetComponent<Scp049PlayerScript>().plyCam.transform.forward;
+
+				float scpAngle = Vector3.Angle(scpFwd, (tarPos - scpPos).normalized);
+				float tarAngle = Vector3.Angle(tarFwd, (scpPos - tarPos).normalized);
+
+				if (tarAngle >= 42f || scpAngle >= 42f)
+				{
+					Plugin.Info("SCP-096: Angle too high, continuing..");
+					continue;
+				}
+				
+				if (!Plugin.Scp096Targets.Contains(hub.queryProcessor.PlayerId))
+				{
+					Plugin.Info($"SCP-096: Adding {hub.queryProcessor.PlayerId} to targets.");
+					Plugin.Scp096Targets.Add(hub.queryProcessor.PlayerId);
+					targets.Add(hub);
+				}
+
+				hub.Broadcast(5, "You are a target for SCP-096!");
+			}
+
+			return targets;
 		}
 
 		public void OnCalm(ref Scp096CalmEvent ev)
