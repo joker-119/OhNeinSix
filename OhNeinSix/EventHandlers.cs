@@ -40,7 +40,7 @@ namespace OhNeinSix
 			1 << 9 | // Pickups
 			1 << 0;   // Default
 		
-		public IEnumerator<float> GetClosestPlayer(Scp096PlayerScript script, ReferenceHub player, List<ReferenceHub> players)
+		public IEnumerator<float> GetClosestPlayer(Scp096PlayerScript script, ReferenceHub player)
 		{
 			yield return Timing.WaitForSeconds(5.5f);
 			while (script.Networkenraged == Scp096PlayerScript.RageState.Enraged)
@@ -54,7 +54,7 @@ namespace OhNeinSix
 				}
 
 				float min = 100f;
-				foreach (ReferenceHub tar in players)
+				foreach (ReferenceHub tar in Player.GetHubs())
 				{
 					if (!Plugin.Scp096Targets.Contains(tar.queryProcessor.PlayerId) || tar == player)
 						continue;
@@ -149,7 +149,7 @@ namespace OhNeinSix
 				ev.Player.serverRoles.BypassMode = true;
 			TargetCount = Plugin.Scp096Targets.Count;
 			scp096 = ev.Player;
-			plugin.Coroutines.Add(Timing.RunCoroutine(GetClosestPlayer(ev.Script, ev.Player, hubs), "checkranges"));
+			plugin.Coroutines.Add(Timing.RunCoroutine(GetClosestPlayer(ev.Script, ev.Player), "checkranges"));
 			plugin.Coroutines.Add(Timing.RunCoroutine(Punish(ev.Script, ev.Player), "punish"));
 		}
 
