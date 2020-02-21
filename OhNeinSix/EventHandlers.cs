@@ -56,7 +56,7 @@ namespace OhNeinSix
 
 					float distance = Vector3.Distance(player.gameObject.transform.position, tar.gameObject.transform.position);
 					
-					if (distance >= plugin.MaxRange)
+					if (distance >=  (player.gameObject.transform.position.y > 500f ? plugin.MaxSurfaceRange : plugin.MaxRange))
 					{
 						Plugin.Scp096Targets.Remove(tar.queryProcessor.PlayerId);
 						targetCount--;
@@ -68,7 +68,7 @@ namespace OhNeinSix
 					}
 				}
 
-				double value = (plugin.MaxRange - min) / plugin.MaxRange;
+				double value = ((player.gameObject.transform.position.y > 500f ? plugin.MaxSurfaceRange : plugin.MaxRange) - min) / (player.gameObject.transform.position.y > 500f ? plugin.MaxSurfaceRange : plugin.MaxRange);
 				string bar = DrawBar(value);
 
 				player.GetComponent<Broadcast>().TargetClearElements(player.characterClassManager.connectionToClient);
@@ -157,7 +157,7 @@ namespace OhNeinSix
 				Vector3 tarPos = hub.gameObject.transform.position;
 				Vector3 scpPos = scp.gameObject.transform.position;
 
-				if (Vector3.Distance(tarPos, scpPos) > plugin.MaxRange)
+				if (Vector3.Distance(tarPos, scpPos) > (scp.gameObject.transform.position.y > 500f ? plugin.MaxSurfaceRange : plugin.MaxRange))
 				{
 					Log.Info("SCP-096: Range too high, continuing..");
 					continue;
@@ -201,8 +201,9 @@ namespace OhNeinSix
 
 			Timing.KillCoroutines("punish");
 			Timing.KillCoroutines("checkranges");
+			bool panicFix = ev.Script._rageProgress >= 9f;
 			ev.Script._rageProgress = 0f;
-			ev.Script.Networkenraged = Scp096PlayerScript.RageState.Cooldown;
+			ev.Script.Networkenraged = panicFix ? Scp096PlayerScript.RageState.NotEnraged : Scp096PlayerScript.RageState.Cooldown;
 			ReferenceHub scp = ev.Script.gameObject.GetPlayer();
 			scp.serverRoles.BypassMode = false;
 			int healAmount = plugin.HealAmount * targetCount;
@@ -245,7 +246,7 @@ namespace OhNeinSix
 			
 			if (ev.Player.characterClassManager.CurClass == RoleType.Scp096 && ev.Player != ev.Attacker && !Plugin.Scp096Targets.Contains(ev.Attacker.queryProcessor.PlayerId))
 			{
-				if (ev.Player.GetComponent<Scp096PlayerScript>().enraged == Scp096PlayerScript.RageState.Enraged)
+				if (ev.Player.GetComponent<Scp096PlayerScript>().enraged == Scp096PlayerScript.RageState.Enraged && plugin.AddOnDamage)
 					Plugin.Scp096Targets.Add(ev.Attacker.queryProcessor.PlayerId);
 				else
 					Timing.KillCoroutines("heal096");

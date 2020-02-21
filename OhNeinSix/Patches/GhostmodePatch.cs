@@ -59,7 +59,7 @@ namespace OhNeinSix.Patches
 						Scp096PlayerScript script = gameObject.GetComponent<Scp096PlayerScript>();
 						if (script.Networkenraged == Scp096PlayerScript.RageState.Enraged || script.Networkenraged == Scp096PlayerScript.RageState.Panic)
 							for (int index = 0; index < __instance.usedData; ++index)
-								if (!Plugin.Scp096Targets.Contains(__instance.transmitBuffer[index].playerID)) 
+								if (!Plugin.Scp096Targets.Contains(__instance.transmitBuffer[index].playerID) && !Player.GetPlayer(__instance.transmitBuffer[index].playerID).characterClassManager.IsAnyScp()) 
 									__instance.transmitBuffer[index] = new PlayerPositionData(Vector3.up * 6000f, 0.0f, __instance.transmitBuffer[index].playerID);
 					}
 

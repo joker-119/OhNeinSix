@@ -13,6 +13,10 @@ namespace OhNeinSix
 
 		public bool Enabled;
 		public float MaxRange;
+		public float MaxSurfaceRange;
+		public static float MaxTriggerRange;
+		public static float MaxTriggerRangeSurface;
+		public bool AddOnDamage;
 		public float DamageResistance;
 		public List<int> BlacklistedRoles;
 		public float PunishDelay;
@@ -79,6 +83,10 @@ namespace OhNeinSix
 			EnragedBypass = Config.GetBool("oh96_enraged_bypass", true);
 			CooldownTime = Config.GetFloat("oh96_cooldown_time", 10f);
 			HealAmount = Config.GetInt("oh96_heal_amount", 65);
+			MaxSurfaceRange = Config.GetFloat("oh96_max_surface_range", 80f);
+			AddOnDamage = Config.GetBool("oh96_damage_causes_target", true);
+			MaxTriggerRange = Config.GetFloat("oh96_trigger_range", 20f);
+			MaxTriggerRangeSurface = Config.GetFloat("oh09_trigger_range_surface", 30f);
 		}
 
 		public override string getName { get; } = "OhNeinSix";
